@@ -1,1 +1,1 @@
-export const HOST = "http://localhost:49585";
+export const HOST = "https://whisper0.hydev.org";
