@@ -1,5 +1,6 @@
 <script lang="ts">
     import { HOST } from './config'
+    import Icon from '@iconify/svelte'
 
     let isDragging = false
     let isUploading = false
@@ -57,6 +58,13 @@
             window.location.href = `/${res.audio_id}`;
         }
     }
+
+    function onFileChange(e: Event) {
+        let input = e.target as HTMLInputElement
+        let file = input.files?.[0]
+        if (!file) return
+        upload(file)
+    }
 </script>
 
 <div>
@@ -68,6 +76,11 @@
         {:else}
             Drop file to upload
         {/if}
+    </div>
+
+    <div class="upload-btn">
+        <input type="file" id="file" on:change={onFileChange} />
+        <label for="file"><Icon icon="tabler:upload"/></label>
     </div>
 </div>
 
@@ -111,6 +124,20 @@
     right: 3rem
 
     z-index: 110
+
+    background: $c-emp
+    width: 50px
+    height: 50px
+    border-radius: 50%
+
+    color: white
+    display: flex
+    align-items: center
+    justify-content: center
+
+    box-shadow: 0 3px 5px rgba(black, 0.4)
+
+    cursor: pointer
 
     input
       display: none
