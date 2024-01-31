@@ -29,6 +29,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 process_queue = []
 processing = ""
+start_time = 0
 lock = threading.Lock()
 
 app.mount("/result", StaticFiles(directory=DATA_DIR / "transcription"), name="result")
@@ -65,19 +66,21 @@ async def progress(uuid: str):
         lavg = float(open("/proc/loadavg").read().strip().split()[0])
         num_cpus = os.cpu_count()
         nvidia = GPUtil.getGPUs()[0].load
+        elapsed = time.time() - start_time
 
-        return {"done": False, "status": f"Processing ({lavg / num_cpus * 100:.0f}% CPU, {nvidia * 100:.0f}% GPU)"}
+        return {"done": False, "status": f"Processing ({lavg / num_cpus * 100:.0f}% CPU, {nvidia * 100:.0f}% GPU, {elapsed:.0f}s elapsed)"}
     else:
         return {"done": False, "status": f"Queued ({process_queue.index(uuid)} in queue before this one)"}
 
 def process():
-    global processing
+    global processing, start_time
     while True:
         time.sleep(0.1)
         with lock:
             if len(process_queue) > 0:
                 audio_id = process_queue.pop(0)
                 processing = audio_id
+                start_time = time.time()
             else:
                 continue
 
@@ -106,6 +109,7 @@ def process():
         # Clear processing
         with lock:
             processing = ""
+            start_time = 0
 
 
 if __name__ == '__main__':
