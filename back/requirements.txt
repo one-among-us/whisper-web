@@ -4,3 +4,4 @@ transformers
 torch
 uvicorn
 intervaltree
+filemagic
