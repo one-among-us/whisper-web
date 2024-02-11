@@ -5,7 +5,8 @@
 
     interface Chunk {
         timestamp: [number, number],
-        text: string
+        text: string,
+        speaker?: string
     }
 
     export let id: string;
@@ -35,6 +36,10 @@
                 tmp.elapsed = [result.elapsed, 0];
             }
             result = tmp;
+
+            for (const chunk of result.output.chunks)
+                chunk.speaker = chunk.speaker?.replace("SPEAKER_0", "")
+
             console.log(result)
             await downloadResults();
         } else {
@@ -44,9 +49,25 @@
     }
 
     async function downloadResults() {
-        const response = await fetch(`${HOST}/result/${id}.txt`);
-        const text = await response.text();
-        download(text, `${id}.txt`, 'text/plain');
+        // Write to timestamped text file
+        const output = result.output;
+        let txt = "";
+        let lastSpeaker = "";
+
+        output.chunks.forEach(c => {
+            let _start = c.timestamp[0];
+            let speaker = c.speaker ?? "?";
+
+            // Convert seconds to 00:00:00 format
+            let start = new Date(_start * 1000).toISOString().substring(11, 19);
+            if (speaker !== lastSpeaker) {
+                txt += `\n[Speaker ${speaker}]\n`;
+                lastSpeaker = speaker;
+            }
+            txt += `${start}: ${c.text}\n`;
+        });
+
+        download(txt, `${id}.txt`, 'text/plain');
     }
 
     function download(content: string, fileName: string, contentType: string) {
@@ -67,6 +88,7 @@
             {#each result.output.chunks as chunk}
                 <div>
                     <span>{moment.utc(chunk.timestamp[0] * 1000).format("HH:mm:ss")}</span>
+                    <span class="speaker s{chunk.speaker}">{chunk.speaker ?? "?"}</span>
                     <p>{chunk.text}</p>
                 </div>
             {/each}
@@ -84,4 +106,14 @@
         gap: 1rem
 
         text-align: left
+
+        > span
+          font-family: monospace
+
+        .speaker
+          color: #ff9595
+        .s0
+          color: #59ffa1
+        .s1
+          color: #597aff
 </style>

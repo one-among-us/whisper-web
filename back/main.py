@@ -87,30 +87,17 @@ def process():
             else:
                 continue
 
-        # Start transcription
-        output, elapsed = diarized_transcribe(DATA_DIR / "audio" / f"{audio_id}.mp3", num_speakers=2)
+        try:
+            # Start transcription
+            output, elapsed = diarized_transcribe(DATA_DIR / "audio" / f"{audio_id}.mp3", num_speakers=2)
 
-        # Write to file
-        write_json(DATA_DIR / "transcription" / f"{audio_id}.json", {
-            "output": output,
-            "elapsed": elapsed
-        })
-
-        # Write to timestamped text file
-        txt = ""
-        last_speaker = None
-        for c in output["chunks"]:
-            start, end = c['timestamp']
-            speaker = c.get('speaker', "SPEAKER_??").replace("SPEAKER_", "Speaker_")
-
-            # Convert seconds to 00:00:00 format
-            start = time.strftime('%H:%M:%S', time.gmtime(start))
-            if speaker != last_speaker:
-                txt += f"\n[{speaker}]\n"
-                last_speaker = speaker
-            txt += f"{start} [{speaker.replace("Speaker_0", "")}]: {c['text']}\n"
-
-        write(DATA_DIR / "transcription" / f"{audio_id}.txt", txt)
+            # Write to file
+            write_json(DATA_DIR / "transcription" / f"{audio_id}.json", {
+                "output": output,
+                "elapsed": elapsed
+            })
+        except Exception as e:
+            pass
 
         # Clear processing
         with lock:
