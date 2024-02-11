@@ -3,3 +3,4 @@ fastapi
 transformers
 torch
 uvicorn
+intervaltree
