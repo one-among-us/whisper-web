@@ -16,7 +16,8 @@
             text: string
             chunks: Chunk[]
         },
-        elapsed: number
+        elapsed: number[]
+        elapsedStr: string
     }
 
     onMount(() => {
@@ -29,7 +30,11 @@
 
         if (data.done) {
             isDone = true;
-            result = (await fetch(`${HOST}/result/${id}.json`).then(res => res.json()));
+            const tmp = (await fetch(`${HOST}/result/${id}.json`).then(res => res.json()));
+            if (typeof tmp.elapsed === 'number') {
+                tmp.elapsed = [result.elapsed, 0];
+            }
+            result = tmp;
             console.log(result)
             await downloadResults();
         } else {
@@ -56,7 +61,7 @@
 <main>
     <h1>Transcription Progress</h1>
     {#if isDone && result}
-        <p>Transcription complete ({result.elapsed.toFixed(1)}s). Your file will download shortly.</p>
+        <p>Transcription complete ({result.elapsed[0].toFixed(1)}s + {result.elapsed[1].toFixed(1)}s). Your file will download shortly.</p>
         <a href={`${HOST}/result/${id}.txt`} download>Download</a>
         <div class="chunks">
             {#each result.output.chunks as chunk}
