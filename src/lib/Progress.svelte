@@ -20,6 +20,7 @@
         elapsed: number[]
         elapsedStr: string
     }
+    let optTimestamps = localStorage.getItem('optTimestamps') === 'true';
 
     onMount(() => {
         checkProgress();
@@ -64,7 +65,11 @@
                 txt += `\n[Speaker ${speaker}]\n`;
                 lastSpeaker = speaker;
             }
-            txt += `${start}: ${c.text}\n`;
+            if (optTimestamps) {
+                txt += `${start}: ${c.text}\n`;
+            } else {
+                txt += `${c.text}\n`;
+            }
         });
 
         download(txt, `${id}.txt`, 'text/plain');
@@ -77,6 +82,11 @@
         a.download = fileName;
         a.click();
     }
+
+    function changeTimestamps() {
+        localStorage.setItem('optTimestamps', optTimestamps.toString())
+        downloadResults()
+    }
 </script>
 
 <main>
@@ -84,6 +94,11 @@
     {#if isDone && result}
         <p>Transcription complete ({result.elapsed[0].toFixed(1)}s + {result.elapsed[1].toFixed(1)}s). Your file will download shortly.</p>
         <a href={`${HOST}/result/${id}.txt`} download>Download</a>
+        <label>
+            <input type="checkbox" bind:checked={optTimestamps} on:change={changeTimestamps} />
+            Include timestamps
+        </label>
+        
         <div class="chunks">
             {#each result.output.chunks as chunk}
                 <div>

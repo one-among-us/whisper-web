@@ -5,3 +5,6 @@ torch
 uvicorn
 intervaltree
 filemagic
+hypy_utils
+soundfile
+pyannote-audio
