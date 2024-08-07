@@ -23,7 +23,7 @@ pipe = pipeline(
     model_kwargs={"use_flash_attention_2": True},
 )
 
-diarize_pipe = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1.1",
+diarize_pipe = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1",
                                         use_auth_token="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")
 diarize_pipe.to(device)
 

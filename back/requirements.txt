@@ -1,7 +1,6 @@
 gputil
 fastapi
-transformers
-torch
+transformers==4.37.2
 uvicorn
 intervaltree
 filemagic
