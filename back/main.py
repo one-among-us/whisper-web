@@ -49,6 +49,11 @@ class PendingProcess(NamedTuple):
     file: Path
 
 
+@app.get('/health')
+def health():
+    return {"status": "ok"}
+
+
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     try:
