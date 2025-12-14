@@ -93,10 +93,9 @@
     <h1>Transcription Progress</h1>
     {#if isDone && result}
         <p>Transcription complete ({result.elapsed[0].toFixed(1)}s + {result.elapsed[1].toFixed(1)}s). Your file will download shortly.</p>
-        <a href={`${HOST}/result/${id}.txt`} download>Download</a>
         <label>
             <input type="checkbox" bind:checked={optTimestamps} on:change={changeTimestamps} />
-            Include timestamps
+            Download with timestamps
         </label>
         
         <div class="chunks">
