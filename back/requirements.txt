@@ -1,9 +1,0 @@
-gputil
-fastapi
-transformers==4.37.2
-uvicorn
-intervaltree
-filemagic
-hypy_utils
-soundfile
-pyannote-audio

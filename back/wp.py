@@ -2,94 +2,110 @@ import gc
 import time
 from pathlib import Path
 
+import os
 import soundfile
 import torch
 from intervaltree import IntervalTree
 from pyannote.core import Annotation
-from transformers import pipeline
 from pyannote.audio import Pipeline
+from faster_whisper import WhisperModel
 
 device = "cuda:0"
-device = torch.device(device)
+device_obj = torch.device(device)
 dtype = torch.float16
-MODEL = "/data/Datasets/whisper"
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-pipe = pipeline(
-    "automatic-speech-recognition",
-    model="openai/whisper-large-v3",
-    torch_dtype=torch.float16,
-    device="cuda",
-    return_timestamps=True,
-    model_kwargs={"use_flash_attention_2": True},
+# Initialize faster-whisper
+fw_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
+
+diarize_pipe = Pipeline.from_pretrained(
+    "pyannote/speaker-diarization-community-1",
+    token=HF_TOKEN
 )
-
-diarize_pipe = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1",
-                                        use_auth_token="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")
-diarize_pipe.to(device)
+diarize_pipe.to(device_obj)
 
 print("Loaded")
 
 
-def transcribe(fp: str | Path, word_timestamps=False) -> (dict, float):
+def transcribe(fp: str | Path, task="transcribe") -> tuple[dict, float]:
     start = time.time()
-    output = pipe(str(fp),
-                  chunk_length_s=30, batch_size=12,
-                  return_timestamps=True, generate_kwargs={"task": "transcribe"})
+    segments, info = fw_model.transcribe(
+        str(fp), 
+        beam_size=5, 
+        task=task, 
+        vad_filter=True, 
+        initial_prompt="English and Mandarin Chinese mixed conversation."
+    )
+    
+    chunks = []
+    for segment in segments:
+        chunks.append({
+            'timestamp': (segment.start, segment.end),
+            'text': segment.text
+        })
+    
+    output = {
+        'text': "".join([c['text'] for c in chunks]),
+        'chunks': chunks
+    }
+
     gc.collect()
     torch.cuda.empty_cache()
     elapsed = time.time() - start
     return output, elapsed
 
 
-def diarize(fp: str | Path, num_speakers: int) -> (Annotation, float):
+def diarize(fp: str | Path, num_speakers: int) -> tuple[any, float]:
     start = time.time()
-    ax, sr = soundfile.read(fp, always_2d=True)  # (time, channels)
-    print(f"audio read {time.time() - start:.2f}s")
-    print(ax.shape, sr)
-    # {"waveform": (channel, time) numpy.ndarray or torch.Tensor, "sample_rate": 44100}
+    ax, sr = soundfile.read(fp, always_2d=True)
     # Convert to torch tensor
-    output: Annotation = diarize_pipe({
-        "waveform": torch.tensor(ax.T, device=device, dtype=torch.float32),
+    output = diarize_pipe({
+        "waveform": torch.tensor(ax.T, device=device_obj, dtype=torch.float32),
         "sample_rate": sr
     }, num_speakers=num_speakers)
     elapsed = time.time() - start
     return output, elapsed
 
 
-def diarized_transcribe(fp: str | Path, num_speakers: int) -> (Annotation, (float, float)):
+def diarized_transcribe(fp: str | Path, num_speakers: int, task="transcribe") -> tuple[dict, tuple[float, float]]:
     # 1. Diarize, create interval tree
-    start = time.time()
-    ano, ela = diarize(fp, num_speakers)
+    output, ela = diarize(fp, num_speakers)
 
     tree = IntervalTree()
-    for segment, _, speaker in ano.itertracks(yield_label=True):
-        tree[segment.start:segment.end] = speaker
+    # Support both new community-1 API and legacy API
+    diarization = getattr(output, 'speaker_diarization', None)
+    
+    if diarization is not None:
+        # New community-1 API
+        for turn, speaker in diarization:
+            tree[turn.start:turn.end] = speaker
+    else:
+        # Legacy 3.1 API
+        for segment, _, speaker in output.itertracks(yield_label=True):
+            tree[segment.start:segment.end] = speaker
 
     # 2. Transcribe
-    output, elapsed = transcribe(fp)
+    output, elapsed = transcribe(fp, task=task)
 
     # 3. Loop through each chunks and add speaker label
     for chunk in output['chunks']:
-        start, end = chunk['timestamp']
+        start_t, end_t = chunk['timestamp']
 
         # Get speaker
-        speakers = tree[start: end]
+        speakers = tree[start_t: end_t]
 
         if not speakers:
             continue
 
         # Choose the speaker with the longest overlapping duration
-        longest = max(speakers, key=lambda s: min(s.end, end) - max(s.begin, start))
+        longest = max(speakers, key=lambda s: min(s.end, end_t) - max(s.begin, start_t))
         chunk['speaker'] = longest.data
 
     return output, (ela, elapsed)
 
 
 if __name__ == '__main__':
-    # out, ela = diarize("/ws/tmp-whisper/audio/cut.mp3", 2)
-    # out: Annotation
-    # print(ela)
-    # print(out.get_labels())
-    print(diarized_transcribe("/ws/tmp-whisper/audio/cut.mp3", num_speakers=2))
-
-
+    # Test
+    import sys
+    if len(sys.argv) > 1:
+        print(diarized_transcribe(sys.argv[1], num_speakers=2))

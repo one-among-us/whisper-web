@@ -1,0 +1,19 @@
+[project]
+name = "back"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.136.0",
+    "faster-whisper>=1.0.3",
+    "filemagic>=1.6",
+    "gputil>=1.4.0",
+    "hypy-utils>=1.0.29",
+    "intervaltree>=3.2.1",
+    "pyannote-audio>=3.1.1",
+    "python-multipart>=0.0.26",
+    "soundfile>=0.13.1",
+    "transformers>=4.48.0",
+    "uvicorn>=0.44.0",
+]

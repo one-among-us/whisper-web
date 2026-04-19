@@ -4,12 +4,11 @@ import time
 import traceback
 import uuid
 from pathlib import Path
-from subprocess import check_call
-from tempfile import NamedTemporaryFile
+import uuid
+from pathlib import Path
 from typing import NamedTuple
 
 import GPUtil
-import magic
 import uvicorn
 from fastapi import FastAPI, UploadFile, File
 from hypy_utils import write, write_json
@@ -33,7 +32,6 @@ TMP_DIR = Path("/tmp/whisper")
 TMP_DIR.mkdir(exist_ok=True)
 DATA_DIR = Path("/ws/tmp-whisper")
 DATA_DIR.mkdir(exist_ok=True)
-MAGIC = magic.Magic(flags=magic.MAGIC_MIME_TYPE)
 
 process_queue = []
 processing = ""
@@ -116,33 +114,14 @@ def process():
                 continue
 
         try:
-            # Check file magic
-            mime = MAGIC.id_buffer(open(fp, "rb").read(2048))
-            is_tmp = False
-
-            if mime not in {'audio/mpeg', 'audio/x-wav', 'audio/wav'}:
-                print(f"Converting {fp} to mp3")
-                mp3_file = TMP_DIR / f"{audio_id}.mp3"
-
-                # Check if file is audio by converting to mp3 (fp) using ffmpeg
-                check_call(["ffmpeg", "-i", fp, "-acodec", "mp3", "-y", mp3_file])
-
-                # Set new fp
-                fp = mp3_file
-                is_tmp = True
-
             # Start transcription
-            output, elapsed = diarized_transcribe(fp, num_speakers=2)
+            output, elapsed = diarized_transcribe(fp, num_speakers=2, task="transcribe")
 
             # Write to file
             write_json(DATA_DIR / "transcription" / f"{audio_id}.json", {
                 "output": output,
                 "elapsed": elapsed
             })
-
-            # Remove tmp file
-            if is_tmp:
-                fp.unlink()
 
         except Exception as e:
             errors[audio_id] = str(e) + "\n\n" + traceback.format_exc()
