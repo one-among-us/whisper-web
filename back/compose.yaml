@@ -1,0 +1,24 @@
+services:
+  whisper-back:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whisper-back
+    restart: unless-stopped
+    ports:
+      - "49585:49585"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      # You can also set CUDA_VISIBLE_DEVICES if needed
+    volumes:
+      - whisper-data:/ws/tmp-whisper
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [compute, utility]
+
+volumes:
+  whisper-data:
