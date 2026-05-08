@@ -12,8 +12,8 @@ dependencies = [
     "hypy-utils>=1.0.29",
     "intervaltree>=3.2.1",
     "pyannote-audio>=3.1.1",
-    "python-multipart>=0.0.26",
+    "python-multipart>=0.0.27",
     "soundfile>=0.13.1",
-    "transformers>=4.48.0",
+    "transformers>=5.0.0rc3",
     "uvicorn>=0.44.0",
 ]
